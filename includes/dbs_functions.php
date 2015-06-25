@@ -16,6 +16,30 @@ function dbs_find_all_items($table_name, $assoc_key, $columns ) {
 	return $item_set;
 }
 
+function dbs_find_all_subcategories() {
+	global $connection;
+
+	$query = "SELECT id, parent_id, name ";
+	$query .= "FROM categories ";
+	$query .= "WHERE parent_id IS NOT NULL";
+	
+	$item_set = $connection->select($query);
+
+	return $item_set;
+}
+
+function dbs_find_all_categories() {
+	global $connection;
+
+	$query = "SELECT id AS ARRAY_KEY, name ";
+	$query .= "FROM categories ";
+	$query .= "WHERE parent_id IS NULL";
+	
+	$item_set = $connection->selectCol($query);
+
+	return $item_set;
+}
+
 function dbs_find_item_by_id($table_name, $id) {
 	global $connection;
 
@@ -23,7 +47,7 @@ function dbs_find_item_by_id($table_name, $id) {
 	$query .= "FROM {$table_name} ";
 	$query .= "WHERE id = ?d ";
 	$query .= "LIMIT 1";
-
+	
 	return $connection->selectRow($query, $id);
 	
 }

@@ -17,7 +17,7 @@ function dbErrorHandler($message, $info) {
 	echo "SQL Error: $message<br><pre>";
 	print_r($info);
 	echo "</pre>";
-	echo "<a href=\"install.php\">Go to install DB page</a>";
+	echo "<a href=\"install.php\">Повторить инсталляцию БД</a><br>";
 	exit;	
 }
 

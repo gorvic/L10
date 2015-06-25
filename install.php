@@ -1,5 +1,6 @@
 <?php
 header("Content-Type: text/html; charset=utf-8");
+session_start();
 require_once './includes/config.php'; 
 require_once './includes/functions.php';
 
@@ -17,16 +18,18 @@ if (isset($_POST['submit'])) {
 	$uname = trim(  $_POST[ 'uname' ]  );
 	$pwd = trim(  $_POST[ 'pwd' ]  );
 	$dbhost = trim( $_POST[ 'dbhost' ] );
+	$drop_tables = (bool) ($_POST['droptables']);
 	//$prefix = trim( $_POST[ 'prefix' ] ) );
 	
 	$connection = mysqli_connect($dbhost, $uname, $pwd);
   // Test if connection succeeded
   if(mysqli_connect_errno()) {
-	echo "<a href=\"install.php\">Go to install DB page</a>";
-    die("Подключение к MySQL прошло неудачно: " . 
+    echo("Подключение к MySQL прошло неудачно: " . 
          mysqli_connect_error() . 
-         " (" . mysqli_connect_errno() . ")"
+         " (" . mysqli_connect_errno() . ")<br>"
     );
+	echo "<a href=\"install.php\">Попробовать ещё раз</a><br>";
+	exit;
   }
   
   if (!mysqli_set_charset($connection, "utf8")) {
@@ -58,6 +61,24 @@ if (!file_exists($filename)) {
 	exit;
 }
 
+if ($drop_tables) {
+	$query = "SHOW TABLES FROM {$dbname}";
+    $tables_set = mysqli_query($connection, $query);
+	if ($tables_set) {
+		while ($table = mysqli_fetch_row( $tables_set)) {
+			$query = "DROP TABLE {$table[0]}";
+			$result = mysqli_query($connection, $query);
+			if (!$result) {
+				die("Не смогли удалить таблицу {$table[0]}");
+			}
+		}
+	} else {
+		echo 'Не смогли выбрать таблицы из БД для удаления';
+	}
+
+}
+
+
 $handle = fopen($filename, "r");
 if ($handle) {
 	
@@ -70,7 +91,8 @@ if ($handle) {
 		$templine .= $line;
 		if (substr(trim($line), -1, 1) == ';') {
 			// Perform the query
-			mysqli_query($connection, $templine) or print('Error performing query \'<strong>' . $templine . '\': ' . mysqli_error($connection) . '<br /><br />');
+			mysqli_query($connection, $templine) 
+				or print('Ошибка выполнения запроса \'<strong>' . $templine . '\': ' . mysqli_error($connection) . '<br /><br />');
 			// Reset temp variable to empty
 			$templine = '';
 		}
@@ -95,33 +117,36 @@ if (!$result) {
 }
 
 mysqli_close($connection);
-
-redirect_to("index.php");
+$_SESSION['Success'] = true; //устанавливаем флаг успеха
+redirect_to("install.php"); //перегружаем
 
 }
+if (isset($_SESSION['Success'])) {
+	echo "<a href=\"index.php\">Установка прошла успешно. Переход на главную страницу сайта</a>";
+}
+session_destroy(); //если попали сюда - значит уничтожаем сессию
 
 ?>
 
 <form method="post" action="install.php">
-	<p><?php _e( "Below you should enter your database connection details. If you&#8217;re not sure about these, contact your host." ); ?></p>
 	<table class="form-table">
 		<tr>
-			<th scope="row"><label for="dbname"><?php _e( 'Database Name' ); ?></label></th>
+			<th scope="row"><label for="dbname"><?php _e( 'Имя БД' ); ?></label></th>
 			<td><input name="dbname" id="dbname" type="text" size="25" value="" /></td>
 			<td><?php //_e( 'The name of the database you want to run WP in.' ); ?></td>
 		</tr>
 		<tr>
-			<th scope="row"><label for="uname"><?php _e( 'User Name' ); ?></label></th>
+			<th scope="row"><label for="uname"><?php _e( 'Пользователь' ); ?></label></th>
 			<td><input name="uname" id="uname" type="text" size="25" value="<?php echo htmlspecialchars( _x( '', 'example username' ), ENT_QUOTES ); ?>" /></td>
 			<td><?php //_e( 'Your MySQL username' ); ?></td>
 		</tr>
 		<tr>
-			<th scope="row"><label for="pwd"><?php _e( 'Password' ); ?></label></th>
+			<th scope="row"><label for="pwd"><?php _e( 'Пароль' ); ?></label></th>
 			<td><input name="pwd" id="pwd" type="text" size="25" value="<?php echo htmlspecialchars( _x( '', 'example password' ), ENT_QUOTES ); ?>" autocomplete="off" /></td>
 			<td><?php //_e( '&hellip;and your MySQL password.' ); ?></td>
 		</tr>
 		<tr>
-			<th scope="row"><label for="dbhost"><?php _e( 'Database Host' ); ?></label></th>
+			<th scope="row"><label for="dbhost"><?php _e( 'Хост' ); ?></label></th>
 			<td><input name="dbhost" id="dbhost" type="text" size="25" value="localhost" /></td>
 			<td> <?php //_e( 'You should be able to get this info from your web host, if <code>localhost</code> does not work.' ); ?></td>
 		</tr>
@@ -134,5 +159,6 @@ redirect_to("index.php");
 	<?php if ( isset( $_GET['noapi'] ) ) { ?><input name="noapi" type="hidden" value="1" /><?php } ?>
 	<input type="hidden" name="language" value="ru_RU />
 	<p class="step"><input name="submit" type="submit" value="Submit" class="button button-large" /></p>
+	<label><input type='checkbox' name='droptables' value='1' checked>Очищать все таблицы БД</label>
 </form>
 

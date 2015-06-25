@@ -9,9 +9,17 @@ $smarty->assign('lesson_number', 10);
 $arr_cities = dbs_find_all_items('cities','id', 'name');
 $smarty->assign('cities', $arr_cities);
 
+//subcategories
+$arr_subcategories_raw  = dbs_find_all_subcategories();
+$arr_subcategories = array();
+foreach ($arr_subcategories_raw as $value) {
+	$arr_subcategories[$value['parent_id']][$value['id']] = $value['name'];
+}
+$smarty->assign('subcategories', $arr_subcategories);
+
 //categories
-$arr_categories  = dbs_find_all_items('categories','id','name');
-$smarty->assign('categories', $arr_categories);
+$arr_categories = dbs_find_all_categories();
+$smarty->assign('labels', $arr_categories);
 
 //organization form
 $arr_organization_form = array('0'=>'Частное лицо','1'=>'Организация');
@@ -23,21 +31,22 @@ $default_button_value = 'Отправить';
 $default_button_name = 'submit';
 $default_edit_id = '';
 
-$form_array =  array(); //[];
-$form_array['seller_name'] = "";
-$form_array['phone'] = "";
-$form_array['allow_mails'] = "";
-$form_array['category_id'] = "";
-$form_array['location_id'] = "";
-$form_array['title'] = "";
-$form_array['description'] = "";
-$form_array['price'] = "0";
-$form_array['email'] = "";
-$form_array['organization_form_id'] = 1;
+//$form_array =  array(); //[];
+//$form_array['seller_name'] = "";
+//$form_array['phone'] = "";
+//$form_array['allow_mails'] = "";
+//$form_array['category_id'] = "";
+//$form_array['location_id'] = "";
+//$form_array['title'] = "";
+//$form_array['description'] = "";
+//$form_array['price'] = "0";
+//$form_array['email'] = "";
+//$form_array['organization_form_id'] = 1;
 
 
+$columns = 'seller_name, phone, allow_mails, category_id, location_id, title, description, price, email,organization_form_id';
 //get advertises
-$ads_array = dbs_find_all_items('ads','id', implode(', ',array_keys($form_array)));
+$ads_array = dbs_find_all_items('ads','id', $columns);
 
 
 if (request_is_post()) {
@@ -93,9 +102,17 @@ if (request_is_post()) {
 
             //заполним массив для вывода html
 			$ad = dbs_find_item_by_id('ads', $id);
-            foreach ($ad as $key => $value) {
-                $form_array[$key] = $value;
-            }
+			
+			$smarty->assign('form_array', $ad);
+
+			//email, значение для checked
+			$smarty->assign('is_allow_mail', $ad['allow_mails'] == 1 ? 'checked' :'');
+
+			//город, значение для selected
+			$smarty->assign('city_selected_id', $ad['location_id']);
+
+			//category, if exists selected value
+			$smarty->assign('category_selected_id', $ad['category_id']);
 
             $default_button_value = 'Записать изменения';
             $default_button_name = 'edit';
@@ -114,23 +131,10 @@ if (request_is_post()) {
     }
 }
 
-$smarty->assign('form_array', $form_array);
-
-//email, значение для checked
-$smarty->assign('is_allow_mail', $form_array['allow_mails'] == 1 ? 'checked' :'');
-
-//город, значение для selected
-$smarty->assign('city_selected_id', $form_array['location_id']);
-
-//category, if exists selected value
-$smarty->assign('category_selected_id', $form_array['category_id']);
-
-
 //button
 $smarty->assign('button_name', $default_button_name);
 $smarty->assign('button_value', $default_button_value);
 $smarty->assign('default_edit_id',$default_edit_id);
-
 
 $smarty->assign('arr_ads', $ads_array);
 
